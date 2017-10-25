@@ -1,0 +1,18 @@
+[Unit]
+Description=Alertmanager Server
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Restart=on-failure
+User={{ alertmanager_user }}
+Group={{ alertmanager_group }}
+RuntimeDirectory=alertmanager_server
+ExecStart=/bin/sh -c "{{ alertmanager_bin_path }}/alertmanager {% for option in alertmanager_options %}-{{ option }} {% endfor %}> {{ alertmanager_log_path }}/{{ alertmanager_log_file }} 2>&1"
+ExecStartPost=/bin/sh -c "echo $MAINPID > /run/alertmanager_server/alertmanager_server.pid"
+ExecReload=/bin/kill -HUP $MAINPID
+PIDFile=/run/alertmanager_server/alertmanager_server.pid
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,82 @@
+---
+- name: ALERTMANAGER | Create Directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ alertmanager_user }}"
+    group: "{{ alertmanager_group }}"
+  with_items:
+    - "{{ alertmanager_root_path }}"
+    - "{{ alertmanager_data_dir }}"
+    - "{{ alertmanager_bin_path }}"
+    - "{{ alertmanager_config_dir }}"
+    - "{{ alertmanager_log_path }}"
+
+- name: ALERTMANAGER | Check alertmanager version
+  command: alertmanager -version
+  register: alertmanager_check
+  changed_when: false
+  ignore_errors: true
+
+- name: ALERTMANAGER | Download file with check (sha256)
+  get_url:
+    url: "{{ alertmanager_url }}"
+    dest: "/tmp"
+    # Get checksum with `sha256sum filename_here`
+    checksum: "sha256:{{ alertmanager_checksum }}"
+  when: 'alertmanager_force_reinstall or alertmanager_check|failed or "alertmanager, version alertmanager_version" not in alertmanager_check.stderr'
+
+- name: ALERTMANAGER | Extract Package
+  unarchive:
+    copy: no
+    src: "/tmp/{{ alertmanager_package }}"
+    dest: "/tmp"
+  when: 'alertmanager_force_reinstall or alertmanager_check|failed or "alertmanager, version alertmanager_version" not in alertmanager_check.stderr'
+
+- name: ALERTMANAGER | Copy binary
+  copy:
+    src: "/tmp/{{ alertmanager_release_name }}/{{ item }}"
+    dest: "{{ alertmanager_bin_path }}/{{ item }}"
+    owner: "{{ alertmanager_user }}"
+    group: "{{ alertmanager_group }}"
+    remote_src: True
+    mode: 0755
+  with_items:
+    - alertmanager
+  notify: restart alertmanager
+  when: 'alertmanager_force_reinstall or alertmanager_check|failed or "alertmanager, version alertmanager_version" not in alertmanager_check.stderr'
+
+- name: ALERTMANAGER | Link binary
+  file:
+    src: "{{ alertmanager_bin_path }}/{{ item }}"
+    dest: "/usr/bin/{{ item }}"
+    state: link
+  with_items:
+    - alertmanager
+
+- name: ALERTMANAGER | Copy Daemon script
+  template:
+    src: alertmanager.service.j2
+    dest: /etc/systemd/system/alertmanager.service
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart alertmanager
+
+- name: "ALERTMANAGER | Manage {{ alertmanager_config_dir }}/alertmanager.yml"
+  template:
+    src: alertmanager.yml.j2
+    dest: "{{ alertmanager_config_dir }}/alertmanager.yml"
+    owner: "{{ alertmanager_user }}"
+    group: "{{ alertmanager_group }}"
+    mode: 0644
+  notify:
+    - restart alertmanager
+
+- name: ALERTMANAGER | Copy logrotate config
+  template:
+    src: logrotate.j2
+    dest: /etc/logrotate.d/alertmanager
+    mode: 0644
+    owner: root
+    group: root

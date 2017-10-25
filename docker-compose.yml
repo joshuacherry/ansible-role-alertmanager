@@ -1,0 +1,23 @@
+version: '2'
+services:
+  centos7:
+    build: docker/centos7/
+    privileged: true
+    entrypoint: /usr/lib/systemd/systemd
+    ports:
+      - "9093:9093"
+      - "80:80"
+  jessie64:
+    build: docker/jessie64/
+    privileged: true
+    entrypoint: /lib/systemd/systemd
+    ports:
+      - "9093:9093"
+      - "80:80"
+  xenial64:
+    build: docker/xenial64/
+    privileged: true
+    entrypoint: /sbin/init
+    ports:
+      - "9093:9093"
+      - "80:80"

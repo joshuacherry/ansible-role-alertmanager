@@ -1,0 +1,24 @@
+---
+- name: ALERTMANAGER | Ensure Alertmanager group
+  group:
+    name: "{{ alertmanager_group }}"
+    system: yes
+    state: present
+
+- name: ALERTMANAGER | Ensure Alertmanager user
+  user:
+    name: "{{ alertmanager_user }}"
+    comment: "alertmanager user account"
+    createhome: no
+    system: yes
+    shell: /bin/false
+
+- include_tasks: install-alertmanager.yml
+  static: no
+
+- name: ALERTMANAGER | Configure systemd service
+  systemd:
+    state: started
+    enabled: yes
+    daemon_reload: yes
+    name: alertmanager
