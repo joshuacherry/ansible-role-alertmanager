@@ -1,9 +1,22 @@
 ---
+- name: ALERTMANAGER | Check for prometheus user
+  getent:
+    database: passwd
+    key: "{{ alertmanager_user }}"
+    fail_key: False
+
+- name: ALERTMANAGER | Check for prometheus group
+  getent:
+    database: passwd
+    key: "{{ alertmanager_group }}"
+    fail_key: False
+
 - name: ALERTMANAGER | Ensure Alertmanager group
   group:
     name: "{{ alertmanager_group }}"
     system: yes
     state: present
+  when: getent_passwd[alertmanager_group] == none
 
 - name: ALERTMANAGER | Ensure Alertmanager user
   user:
@@ -12,6 +25,7 @@
     createhome: no
     system: yes
     shell: /bin/false
+  when: getent_passwd[alertmanager_user] == none
 
 - include_tasks: install-alertmanager.yml
   static: no
